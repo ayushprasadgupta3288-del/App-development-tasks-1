@@ -1,0 +1,277 @@
+<!-- 
+
+Welcome to GDB Online.
+GDB online is an online compiler and debugger tool for C, C++, Python, Java, PHP, Ruby, Perl,
+C#, OCaml, VB, Swift, Pascal, Fortran, Haskell, Objective-C, Assembly, HTML, CSS, JS, SQLite, Prolog.
+Code, Compile, Run and Debug online from anywhere in world.
+
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Craft: Collage Maker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            background-color: #222;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .screen {
+            width: 100%;
+            max-width: 400px;
+            background: #2b2b2b;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+
+        h2 { text-align: center; margin-top: 0; font-family: monospace; letter-spacing: 2px; }
+        .subtitle { text-align: center; color: #aaa; font-weight: bold; margin-bottom: 25px; }
+
+        .hidden { display: none; }
+
+        button {
+            width: 100%;
+            background: #eee;
+            color: black;
+            border: none;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 900;
+            font-family: monospace;
+            transition: background 0.2s;
+        }
+        button:hover { background: #ccc; }
+        .back-btn { background: #cc4444; color: white; width: auto; padding: 6px 12px; float: right; margin: 0; font-size: 12px;}
+        .back-btn:hover { background: #e55555; }
+
+        /* Collage Canvas Area */
+        #canvas-container {
+            width: 100%;
+            height: 300px;
+            background: #111;
+            margin: 20px 0;
+            overflow: hidden;
+            display: flex;
+            box-sizing: border-box;
+        }
+
+        /* Individual Frame Column Slots */
+        .grid-slot {
+            flex: 1;
+            height: 100%;
+            background: #444;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        /* Draggable visual shape inside the column slot */
+        .movable-box {
+            width: 140px;
+            height: 140px;
+            background: linear-gradient(45deg, #ff007f, #7f00ff, #00ffff);
+            border-radius: 8px;
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .control-group {
+            margin: 15px 0;
+            background: #333;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #fff;
+        }
+        .control-group input {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .footer-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="selection-screen" class="screen">
+        <h2>GALLERY</h2>
+        <div class="subtitle">CHOOSE LAYOUT</div>
+        <button onclick="startEditor(2)">2 GRID</button>
+        <button onclick="startEditor(3)">3 GRID</button>
+        <button onclick="startEditor(4)">4 GRID</button>
+    </div>
+
+    <div id="editor-screen" class="screen hidden">
+        <button class="back-btn" onclick="goBack()">🏠</button>
+        <h2 style="text-align: left; margin: 0;">CUSTOM EDITOR</h2>
+        
+        <div id="canvas-container"></div>
+
+        <div class="control-group">
+            <label id="radius-label">RADIUS : 16</label>
+            <input type="range" id="radius-slider" min="0" max="50" value="16" oninput="updateModifiers()">
+        </div>
+
+        <div class="control-group">
+            <label id="spacing-label">SPACING : 8</label>
+            <input type="range" id="spacing-slider" min="0" max="60" value="8" oninput="updateModifiers()">
+        </div>
+
+        <div class="footer-btns">
+            <button style="background: #eee; color: black;" onclick="saveCollageImage()">SAVE</button>
+            <button style="background: #eee; color: black;" onclick="saveCollageImage()">EXPORT</button>
+        </div>
+    </div>
+
+    <script>
+        let currentGridCount = 2;
+
+        function startEditor(gridCount) {
+            currentGridCount = gridCount;
+            document.getElementById('selection-screen').classList.add('hidden');
+            document.getElementById('editor-screen').classList.remove('hidden');
+            buildGrid(gridCount);
+        }
+
+        function goBack() {
+            document.getElementById('editor-screen').classList.add('hidden');
+            document.getElementById('selection-screen').classList.remove('hidden');
+        }
+
+        function buildGrid(count) {
+            const container = document.getElementById('canvas-container');
+            container.innerHTML = ''; 
+
+            for (let i = 0; i < count; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'grid-slot';
+                
+                const box = document.createElement('div');
+                box.className = 'movable-box';
+                
+                makeElementDraggable(box);
+                
+                slot.appendChild(box);
+                container.appendChild(slot);
+            }
+            updateModifiers(); 
+        }
+
+        function updateModifiers() {
+            const radius = document.getElementById('radius-slider').value;
+            const spacing = document.getElementById('spacing-slider').value;
+
+            // Updates real-time slider text output
+            document.getElementById('radius-label').innerText = `RADIUS : ${radius}`;
+            document.getElementById('spacing-label').innerText = `SPACING : ${spacing}`;
+
+            const container = document.getElementById('canvas-container');
+            
+            // Apply structural spacing to canvas
+            container.style.padding = (spacing / 2) + 'px';
+            container.style.gap = spacing + 'px';
+
+            const slots = document.querySelectorAll('.grid-slot');
+            slots.forEach(slot => {
+                slot.style.borderRadius = radius + 'px';
+            });
+        }
+
+        // --- EXPORT & SAVE IMAGE GENERATOR ---
+        function saveCollageImage() {
+            const container = document.getElementById('canvas-container');
+
+            html2canvas(container, {
+                backgroundColor: '#111', 
+                scale: 2 
+            }).then(canvas => {
+                const imageURI = canvas.toDataURL("image/png");
+                
+                const downloadLink = document.createElement('a');
+                downloadLink.href = imageURI;
+                downloadLink.download = `collage_grid_${currentGridCount}.png`;
+                
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            }).catch(error => {
+                console.error("Export Error: ", error);
+                alert("Something went wrong while exporting image.");
+            });
+        }
+
+        // Draggable Functionality
+        function makeElementDraggable(elmnt) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            elmnt.onmousedown = dragMouseDown;
+            elmnt.ontouchstart = dragMouseDown; 
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                if(e.type === 'touchstart') {
+                    pos3 = e.touches[0].clientX;
+                    pos4 = e.touches[0].clientY;
+                    document.ontouchend = closeDragElement;
+                    document.ontouchmove = elementDrag;
+                } else {
+                    e.preventDefault();
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    document.onmouseup = closeDragElement;
+                    document.onmousemove = elementDrag;
+                }
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                let clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                let clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+                pos1 = pos3 - clientX;
+                pos2 = pos4 - clientY;
+                pos3 = clientX;
+                pos4 = clientY;
+
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+                document.ontouchend = null;
+                document.ontouchmove = null;
+            }
+        }
+    </script>
+</body>
+</html>
